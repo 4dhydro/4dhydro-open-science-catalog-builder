@@ -8,7 +8,7 @@ from pygeoif import geometry
 from dateutil.parser import parse as parse_datetime
 from slugify import slugify
 
-from .types_ import Contact, Product, Project, Status, Theme, Variable, EOMission, Benchmark
+from .types_ import Contact, Product, Project, Status, Theme, Variable, EOMission, Benchmark, Processes
 from .util import parse_decimal_date, get_depth
 
 def get_metadata_column() -> dict:
@@ -192,6 +192,20 @@ def load_orig_variables(file: TextIO) -> List[Variable]:
             description=line["variable description"],
             link=line["link"],
             themes=parse_list(line["themes"]),
+        )
+        for line in csv.DictReader(file)
+    ]
+
+def load_orig_processes(file: TextIO) -> List[Processes]:
+    return [
+        Processes(
+            name=line["Name"],
+            project=line["Project"],
+            description=line["Description"],
+            link=line["link"],
+            asset=line["link"],
+            consortium=line["link"],
+
         )
         for line in csv.DictReader(file)
     ]

@@ -109,3 +109,13 @@ class EOMission:
 @dataclass
 class Benchmark(Product):
     pass
+
+@dataclass
+class Processes:
+    name: str
+    project: str
+    description: Optional[str]
+    link: Optional[str]
+    asset: Optional[str]
+    language: Optional[str]
+    consortium: Optional[str]
