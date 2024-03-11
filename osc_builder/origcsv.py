@@ -8,7 +8,7 @@ from pygeoif import geometry
 from dateutil.parser import parse as parse_datetime
 from slugify import slugify
 
-from .types_ import Contact, Product, Project, Status, Theme, Variable, EOMission, Benchmark
+from .types_ import Contact, Product, Project, Status, Theme, Variable, EOMission, Benchmark, Processes
 from .util import parse_decimal_date, get_depth
 
 def get_metadata_column() -> dict:
@@ -19,6 +19,7 @@ def get_metadata_column() -> dict:
         "Themes": 4,
         "Variables": 4,
         "Benchmarks": 26,
+        "Processes": 8,
 
     }
 
@@ -172,7 +173,6 @@ def load_orig_projects(file: TextIO) -> List[Project]:
     ]
     return projects
 
-
 def load_orig_themes(file: TextIO) -> List[Theme]:
     return [
         Theme(
@@ -183,7 +183,6 @@ def load_orig_themes(file: TextIO) -> List[Theme]:
         )
         for line in csv.DictReader(file)
     ]
-
 
 def load_orig_variables(file: TextIO) -> List[Variable]:
     return [
@@ -196,6 +195,19 @@ def load_orig_variables(file: TextIO) -> List[Variable]:
         for line in csv.DictReader(file)
     ]
 
+def load_orig_processes(file: TextIO) -> List[Processes]:
+    return [
+        Processes(
+            project=line["Project"],
+            name=line["Name"],
+            description=line["Description"],
+            link=line["Link"],
+            asset=line["Asset"],
+            released=parse_released(line["Released"]),
+            languages=parse_list(line["Languages"])
+        )
+        for line in csv.DictReader(file)
+    ]
 
 def load_orig_eo_missions(file: TextIO) -> List[EOMission]:
     return [
@@ -215,6 +227,7 @@ def validate_csvs(
         projects_file: TextIO,
         products_file: TextIO,
         benchmarks_file: TextIO,
+        processes_file: TextIO,
 ) -> List[str]:
     THEMES = {
         line["theme"].strip(): line for line in csv.DictReader(themes_file)
@@ -240,59 +253,24 @@ def validate_csvs(
 
     issues = []
 
-    products_file.seek(0)
-    products_file_reader = csv.reader(products_file)
-    product_column_names = next(products_file_reader)
-    if len(product_column_names) != get_metadata_column()["Products"]:
-        issues.append(
-            f"""Products csv file is corrupted, this csv must have {get_metadata_column()['Products']}
-                 columns but {len(product_column_names)} got. """
-        )
+    def _valid_length_file(file_input: TextIO, name_file: str):
+        file_input.seek(0)
+        file_reader = csv.reader(file_input)
+        file_column_name = next(file_reader)
+        if len(file_column_name) != get_metadata_column()[name_file]:
+            issues.append(
+                f"""{name_file} csv file is corrupted, this csv must have {get_metadata_column()[name_file]}
+                             columns but {len(file_column_name)} got. """
+            )
 
-    projects_file.seek(0)
-    project_file_reader = csv.reader(projects_file)
-    project_column_names = next(project_file_reader)
-    if len(project_column_names) != get_metadata_column()["Projects"]:
-        issues.append(
-            f"""Projects csv file is corrupted, this csv must have {get_metadata_column()['Projects']} columns
-            but {len(project_column_names)} got. """
-        )
+    _valid_length_file(products_file, "Products")
+    _valid_length_file(projects_file, "Projects")
+    _valid_length_file(variables_file, "Variables")
+    _valid_length_file(missions_file, "EO Missions")
+    _valid_length_file(benchmarks_file, "Benchmarks")
+    _valid_length_file(processes_file, "Processes")
 
-    variables_file.seek(0)
-    variables_file_reader = csv.reader(variables_file)
-    variables_column_names = next(variables_file_reader)
-    if len(variables_column_names) != get_metadata_column()["Variables"]:
-        issues.append(
-            f"""Variables csv file is corrupted, this csv have {get_metadata_column()['Variables']} columns
-            but {len(variables_column_names)} got. """
-        )
 
-    themes_file.seek(0)
-    themes_file_reader = csv.reader(themes_file)
-    themes_column_names = next(themes_file_reader)
-    if len(themes_column_names) != get_metadata_column()["Themes"]:
-        issues.append(
-            f"""Themes csv file is corrupted, this csv have {get_metadata_column()['Themes']} columns 
-            but {len(themes_column_names)} got. """
-        )
-
-    missions_file.seek(0)
-    missions_file_reader = csv.reader(missions_file)
-    missions_column_names = next(missions_file_reader)
-    if len(missions_column_names) != get_metadata_column()["EO Missions"]:
-        issues.append(
-            f"""Eo Missions csv file is corrupted, this csv have {get_metadata_column()['EO Missions']} columns
-            but {len(missions_column_names)} got. """
-        )
-
-    benchmarks_file.seek(0)
-    benchmarks_file_reader = csv.reader(benchmarks_file)
-    benchmarks_column_names = next(benchmarks_file_reader)
-    if len(benchmarks_column_names) != get_metadata_column()["Benchmarks"]:
-        issues.append(
-            f"""Benchmarks csv file is corrupted, this csv have {get_metadata_column()['Benchmarks']} columns
-                but {len(benchmarks_column_names)} got. """
-        )
 
     for name, variable in VARIABLES.items():
         for theme in parse_list(

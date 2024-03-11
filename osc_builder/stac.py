@@ -15,7 +15,7 @@ from pystac.extensions.base import (
 import pystac.stac_io
 import pystac.link
 
-from .types_ import Product, Project, Theme, Variable, EOMission, ProductSegmentation
+from .types_ import Product, Project, Theme, Variable, EOMission, ProductSegmentation, Processes
 
 
 mimetypes.add_type("image/webp", ".webp")
@@ -48,6 +48,7 @@ CATEGORY_NAME_PROP = f"{PREFIX}category"
 COORDINATE_NAME_PROP = f"{PREFIX}coordinate_system"
 SPATIAL_RESOLUTION_NAME_PROP = f"{PREFIX}spatial_resolution"
 TEMPORAL_RESOLUTION_NAME_PROP = f"{PREFIX}temporal_resolution"
+PROCESSES_LANGUAGE_NAME_PROP = f"{PREFIX}languages"
 
 OSC_SCHEME_THEMES = "https://github.com/stac-extensions/osc#theme"
 OSC_SCHEME_VARIABLES = "https://github.com/stac-extensions/osc#variable"
@@ -235,6 +236,44 @@ class CollectionOSCExtension(OSCExtension[pystac.Collection]):
         if product_segmentation.end:
             common.end_datetime = product_segmentation.end
 
+    def apply_processes(self, process: Processes):
+        self.properties.update(
+            {
+                "title": process.name,
+                "description": process.description,
+                NAME_PROP: process.name,
+                PROJECT_PROP: process.project,
+                TYPE_PROP: "Processes",
+                PROCESSES_LANGUAGE_NAME_PROP: [
+                    {
+                        "name": language,
+                    }
+                    for language in process.languages
+                ],
+            }
+        )
+        common = pystac.CommonMetadata(self.collection)
+
+        if isinstance(process.released, date):
+            common.created = datetime.combine(
+                process.released, time.min, timezone.utc
+            )
+
+        if process.link:
+            self.collection.add_link(
+                pystac.Link(
+                    pystac.RelType.VIA,
+                    process.link,
+                    title="Repository link",
+                )
+            )
+        if process.asset:
+            self.collection.add_asset(
+                process.name,
+                pystac.Asset(
+                    href=process.link,
+                )
+            )
 
 
 class ItemOSCExtension(OSCExtension[pystac.Item]):
@@ -348,6 +387,21 @@ def collection_from_project(project: Project) -> pystac.Collection:
 
     return collection
 
+def collection_from_processes(process: Processes) -> pystac.Collection:
+    collection = pystac.Collection(
+        slugify(process.name),
+        process.description,
+        extent=pystac.Extent(
+            pystac.SpatialExtent([-180.0, -90.0, 180.0, 90.0]),
+            pystac.TemporalExtent([[None, None]]),
+        ),
+        title=process.name,
+    )
+
+    osc_ext: CollectionOSCExtension = OSCExtension.ext(collection, True)
+    osc_ext.apply_processes(process)
+
+    return collection
 
 def catalog_from_theme(theme: Theme) -> pystac.Catalog:
     catalog = pystac.Catalog(

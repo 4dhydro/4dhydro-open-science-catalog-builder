@@ -23,6 +23,7 @@ ENCODING = "UTF-8"
 @click.argument("projects_file", type=click.File("r", encoding=ENCODING))
 @click.argument("products_file", type=click.File("r", encoding=ENCODING))
 @click.argument("benchmarks_file", type=click.File("r", encoding=ENCODING))
+@click.argument("processes_file", type=click.File("r", encoding=ENCODING))
 @click.option("--out-dir", "-o", default="data", type=str)
 @click.option("--catalog-url", "-c", default="", type=str)
 @click.option("--validate-csvs/--no-validate-csvs", default=True)
@@ -33,6 +34,7 @@ def convert(
     projects_file: TextIO,
     products_file: TextIO,
     benchmarks_file: TextIO,
+    processes_file: TextIO,
     out_dir: str,
     catalog_url: str,
     validate_csvs: bool,
@@ -46,6 +48,7 @@ def convert(
             projects_file,
             products_file,
             benchmarks_file,
+            processes_file,
         )
         if issues:
             for issue in issues:
@@ -61,6 +64,7 @@ def convert(
         projects_file.seek(0)
         products_file.seek(0)
         benchmarks_file.seek(0)
+        processes_file.seek(0)
 
     convert_csvs(
         variables_file,
@@ -69,6 +73,7 @@ def convert(
         projects_file,
         products_file,
         benchmarks_file,
+        processes_file,
         out_dir,
         catalog_url,
     )

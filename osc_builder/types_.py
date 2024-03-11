@@ -109,3 +109,14 @@ class EOMission:
 @dataclass
 class Benchmark(Product):
     pass
+
+@dataclass
+class Processes:
+    name: str
+    project: str
+    description: Optional[str]
+    link: Optional[str]
+    asset: Optional[str]
+    languages: List[str] = field(default_factory=list)
+    released: Union[date, None, Literal["Planned"]] = None
+
