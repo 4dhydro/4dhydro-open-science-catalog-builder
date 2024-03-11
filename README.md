@@ -40,7 +40,7 @@ This command transforms the original metadata CSVs into an intermediate structur
 ```bash
 $ osc convert --help
 Usage: osc convert [OPTIONS] VARIABLES_FILE THEMES_FILE EO_MISSIONS
-                              PROJECTS_FILE PRODUCTS_FILE BENCHMARK_FILE
+                              PROJECTS_FILE PRODUCTS_FILE BENCHMARK_FILE PROCESSES_FILE
 
 Options:
   -o, --out-dir TEXT
@@ -50,7 +50,7 @@ Options:
 This command requires the input CSVs for variables, themes, projects and products in order to create the output structure. The output directory can be specified using the `-o` option.
 
 ```bash
-$ osc convert Variables.csv Themes.csv Projects.csv Products.csv WP5_Tier2_Products.csv -o out
+$ osc convert Variables.csv Themes.csv Projects.csv Products.csv WP5_Tier2_Products.csv Processes.csv -o out
 $ tree out
 out/
 ├── products
@@ -60,17 +60,16 @@ out/
 │   ├── product-103.json
 │   └── ...
 │
-├── benchmarks
-│   ├── benchmarks-100.json
-│   ├── benchmarks-101.json
-│   ├── benchmarks-102.json
-│   ├── benchmarks-103.json
-│   └── ...
 ├── projects
 │   ├── project-100.json
 │   ├── project-101.json
 │   ├── project-102.json
 │   ├── project-103.json
+│   └── ...
+├── processes
+│   ├── processes-100.json
+│   ├── processes-101.json
+│   ├── processes-102.json
 │   └── ...
 ├── themes
 │   ├── atmosphere.json

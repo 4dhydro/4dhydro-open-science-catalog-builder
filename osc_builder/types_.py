@@ -117,5 +117,6 @@ class Processes:
     description: Optional[str]
     link: Optional[str]
     asset: Optional[str]
-    language: Optional[str]
-    consortium: Optional[str]
+    languages: List[str] = field(default_factory=list)
+    released: Union[date, None, Literal["Planned"]] = None
+

@@ -21,6 +21,7 @@ from .origcsv import (
     load_orig_variables,
     load_orig_eo_missions,
     load_orig_benchmarks,
+    load_orig_processes,
 )
 from .stac import (
     PROJECT_PROP,
@@ -30,6 +31,7 @@ from .stac import (
     collection_from_product,
     collection_from_segmentation_product,
     collection_from_project,
+    collection_from_processes,
     catalog_from_theme,
     catalog_from_variable,
     catalog_from_eo_mission,
@@ -55,6 +57,7 @@ def convert_csvs(
         projects_file: TextIO,
         products_file: TextIO,
         benchmarks_file: TextIO,
+        processes_files: TextIO,
         out_dir: str,
         catalog_url: Optional[str],
 ):
@@ -62,11 +65,10 @@ def convert_csvs(
     variables = load_orig_variables(variables_file)
     themes = load_orig_themes(themes_file)
     projects = load_orig_projects(projects_file)
-    products = load_orig_products(products_file)
+    products = load_orig_products(products_file) + load_orig_benchmarks(benchmarks_file)
     segmentation_products = get_product_segmentation(products)
-    benchmarks = load_orig_benchmarks(benchmarks_file)
-    segmentation_benchmarks = get_product_segmentation(benchmarks)
     eo_missions = load_orig_eo_missions(eo_missions_file)
+    processes = load_orig_processes(processes_files)
 
     # set root structure
     root = pystac.Catalog(
@@ -90,10 +92,10 @@ def convert_csvs(
         "Products",
     )
 
-    benchmarks_catalog = pystac.Catalog(
-        "benchmarks",
-        "Geoscience Benchmarks",
-        "Benchmarks",
+    processes_catalog = pystac.Catalog(
+        "processes",
+        "Find all the scripts and tools you need to make the most of this catalog ",
+        "Processes",
     )
 
     themes_catalog = pystac.Catalog(
@@ -122,7 +124,7 @@ def convert_csvs(
     root.add_child(variables_catalog)
     root.add_child(eo_missions_catalog)
     root.add_child(products_catalog)
-    root.add_child(benchmarks_catalog)
+    root.add_child(processes_catalog)
 
     themes_catalog.add_children(
         sorted(
@@ -148,15 +150,22 @@ def convert_csvs(
             key=lambda collection: collection.id,
         )
     )
+    processes_catalog.add_children(
+        sorted(
+            (collection_from_processes(process) for process in processes),
+            key=lambda collection: collection.id,
+        )
+    )
     products_catalog.add_children(
         sorted(
             (collection_from_segmentation_product(parent) for parent in segmentation_products),
             key=lambda collection: collection.id,
         )
     )
-    benchmarks_catalog.add_children(
+
+    projects_catalog.add_children(
         sorted(
-            (collection_from_segmentation_product(parent) for parent in segmentation_benchmarks),
+            (collection_from_project(project) for project in projects),
             key=lambda collection: collection.id,
         )
     )
@@ -171,7 +180,6 @@ def convert_csvs(
                 catalog.add_child(collection_from_product(line_product))
 
     _link_sub_product(products_catalog, products)
-    _link_sub_product(benchmarks_catalog, benchmarks)
 
     # save catalog
     root.normalize_and_save(out_dir, pystac.CatalogType.SELF_CONTAINED)
@@ -324,11 +332,11 @@ def make_collection_assets_absolute(collection: pystac.Collection):
 
 def link_collections(
     product_collections: Iterable[pystac.Collection],
-    benchmark_collections: Iterable[pystac.Collection],
     project_collections: Iterable[pystac.Collection],
     theme_catalogs: Iterable[pystac.Catalog],
     variable_catalogs: Iterable[pystac.Catalog],
     eo_mission_catalogs: Iterable[pystac.Catalog],
+    processes_collections: Iterable[pystac.Collection],
 ):
     themes_map: dict[str, pystac.Catalog] = {
         catalog.id: catalog for catalog in theme_catalogs
@@ -369,6 +377,20 @@ def link_collections(
                 )
                 for theme in get_theme_names(project_collection)
             ]
+        )
+
+    # link processes -> project
+    for process_collection in processes_collections:
+        project_collection = project_map[
+            slugify(process_collection.extra_fields[PROJECT_PROP])
+        ]
+        process_collection.add_link(
+            pystac.Link(
+                rel="related",
+                target=project_collection,
+                media_type="application/json",
+                title=f"Project: {project_collection.title}",
+            )
         )
 
     def _links_all_products(product_interface_collections:Iterable[pystac.Collection])-> None:
@@ -430,8 +452,6 @@ def link_collections(
     # link products
     _links_all_products(product_collections)
 
-    # link benchmark
-    _links_all_products(benchmark_collections)
 
 
 # TODO: apply keywords
@@ -460,22 +480,22 @@ def build_dist(
 
     link_collections(
         root.get_child("products").get_children(),
-        root.get_child("benchmarks").get_children(),
         root.get_child("projects").get_children(),
         root.get_child("themes").get_children(),
         root.get_child("variables").get_children(),
         root.get_child("eo-missions").get_children(),
+        root.get_child("processes").get_children(),
     )
 
     # Apply keywords
     from itertools import chain
     catalogs = chain(
         root.get_child("products").get_children(),
-        root.get_child("benchmarks").get_children(),
         root.get_child("projects").get_children(),
         root.get_child("themes").get_children(),
         root.get_child("variables").get_children(),
         root.get_child("eo-missions").get_children(),
+        root.get_child("processes").get_children(),
     )
     from .stac import apply_keywords
     for catalog in catalogs:
