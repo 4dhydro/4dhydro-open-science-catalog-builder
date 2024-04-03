@@ -125,7 +125,7 @@ def load_orig_benchmarks(file: TextIO) -> List[Benchmark]:
         Benchmark(
             id=line["Short_Name"],
             website=line.get("Website"),
-            title=line["Benchmark"],
+            title=line["Product"],
             description=line["Description"],
             project=line["Project"],
             variables=parse_list(line["Variables"]),
@@ -248,7 +248,7 @@ def validate_csvs(
         line["Product"].strip(): line for line in csv.DictReader(products_file)
     }
     BENCHMARKS = {
-        line["Benchmark"].strip(): line for line in csv.DictReader(benchmarks_file)
+        line["Product"].strip(): line for line in csv.DictReader(benchmarks_file)
     }
 
     issues = []
@@ -281,7 +281,7 @@ def validate_csvs(
                     f"Variable '{name}' references non-existing theme '{theme}'"
                 )
 
-    def _validate_products(product_interface: dict, element) -> list[str]:
+    def _validate_products(product_interface: dict, element:str) -> list[str]:
         _issues = []
         for name, product in product_interface.items():
             project = product["Project"]
@@ -290,9 +290,14 @@ def validate_csvs(
                     f"{element} '{name}' references non-existing project '{project}'"
                 )
 
+            if product["Product"] is None or product["Product"] == '':
+                _issues.append(
+                    f"{element} missing product column \"product\" for the line {product['ID']}"
+                )
+
             if product["Collection"] is None or product["Collection"] == '':
                 _issues.append(
-                    f"Product '{name}' has not collection linked please add collection for the product"
+                    f"{element} '{name}' has not collection linked please add collection for the product"
                 )
 
             for theme in get_themes(product):
@@ -315,6 +320,6 @@ def validate_csvs(
             return _issues
 
     issues = issues + _validate_products(PRODUCTS, "Product")
-    issues = issues + _validate_products(BENCHMARKS, "Benchmark")
+    issues = issues + _validate_products(BENCHMARKS, "WP5_Tier2_Products")
 
     return issues

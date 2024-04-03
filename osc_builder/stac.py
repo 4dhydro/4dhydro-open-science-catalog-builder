@@ -22,6 +22,9 @@ mimetypes.add_type("image/webp", ".webp")
 
 T = TypeVar("T", pystac.Catalog, pystac.Collection, pystac.Item)
 
+CORE_SCHEMA_URI : str = (
+    "https://stac-extensions.github.io/themes/v1.0.0/schema.json"
+)
 # TODO: fix schema URL
 OSC_SCHEMA_URI: str = (
     "https://stac-extensions.github.io/osc/v1.0.0-rc.2/schema.json"
@@ -167,6 +170,13 @@ class CollectionOSCExtension(OSCExtension[pystac.Collection]):
                     url="https://4dhydro.eu/consortium/"
                 )
             ]
+        if product.access:
+            self.collection.add_asset(
+                product.id,
+                pystac.Asset(
+                    href=product.access,
+                )
+            )
 
     def apply_project(self, project: Project):
         self.properties.update(

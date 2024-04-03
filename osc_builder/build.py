@@ -474,6 +474,9 @@ def build_dist(
     root: pystac.Catalog = pystac.read_file(
         os.path.join(out_dir, "catalog.json")
     )
+    root.extra_fields.setdefault("conformsTo", [
+        "https://api.stacspec.org/v1.0.0/core",
+    ])
 
     if update_timestamps:
         set_update_timestamps(root, None)
