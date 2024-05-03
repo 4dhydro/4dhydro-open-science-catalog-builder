@@ -16,7 +16,7 @@ import pystac.stac_io
 import pystac.link
 
 from .types_ import Product, Project, Theme, Variable, EOMission, ProductSegmentation, Processes
-
+from .util import get_model_code_ref
 
 mimetypes.add_type("image/webp", ".webp")
 
@@ -154,6 +154,17 @@ class CollectionOSCExtension(OSCExtension[pystac.Collection]):
                     title="Access",
                 )
             )
+
+        code_ref = get_model_code_ref(product)
+        if code_ref:
+            self.collection.add_link(
+                pystac.Link(
+                    pystac.RelType.VIA,
+                    code_ref,
+                    title="Model Code",
+                )
+            )
+
         if product.notebook:
             self.collection.add_link(
                 pystac.Link(
