@@ -40,7 +40,7 @@ This command transforms the original metadata CSVs into an intermediate structur
 ```bash
 $ osc convert --help
 Usage: osc convert [OPTIONS] VARIABLES_FILE THEMES_FILE EO_MISSIONS
-                              PROJECTS_FILE PRODUCTS_FILE BENCHMARK_FILE PROCESSES_FILE
+                              PROJECTS_FILE WP1_PRODUCTS_FILE WP2_PRODUCTS_FILE WP5_PRODUCTS_FILE PROCESSES_FILE
 
 Options:
   -o, --out-dir TEXT
@@ -50,7 +50,7 @@ Options:
 This command requires the input CSVs for variables, themes, projects and products in order to create the output structure. The output directory can be specified using the `-o` option.
 
 ```bash
-$ osc convert Variables.csv Themes.csv Projects.csv Products.csv WP5_Tier2_Products.csv Processes.csv -o out
+$ osc convert Variables.csv Themes.csv Projects.csv WP1_Tier1_Products.csv WP2_Tier1_Products.csv WP5_Tier2_Products.csv Processes.csv -o out
 $ tree out
 out/
 ├── products
@@ -110,3 +110,11 @@ Options:
 $ osc build --no-add-iso -o build --pretty-print -r http://some-catalog.com ../open-science-catalog-metadata/data/
 ```
 
+###  Consolidation of a Reference LSM dataset
+
+the work package consists of a major benchmark exercise based on existing data and standard model
+evaluation procedures. The Tier 1 simulation setup will consist of varying (EO-based) forcing and reanalysis
+data sets utilizing homogenized inputs between different models where possible. All modelling groups
+are asked to provide their outputs on the World Geodetic System (WGS-84; EPSG:4326) coordinate system
+
+**Table 1: List of third-party datasets used as inputs for the LSMs/HMs in 4DHydro**

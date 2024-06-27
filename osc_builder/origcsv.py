@@ -14,13 +14,14 @@ from .util import parse_decimal_date, get_depth
 def get_metadata_column() -> dict:
     return {
         "EO Missions": 3,
-        "Products": 26,
+        "WP1 Products": 26,
+        "WP2 Products": 26,
+        "WP5 Products": 26,
         "Projects": 10,
         "Themes": 4,
         "Variables": 4,
         "Benchmarks": 26,
         "Processes": 8,
-
     }
 
 def get_themes(obj: dict) -> List[str]:
@@ -225,8 +226,9 @@ def validate_csvs(
         themes_file: TextIO,
         missions_file: TextIO,
         projects_file: TextIO,
-        products_file: TextIO,
-        benchmarks_file: TextIO,
+        products_wp1_file: TextIO,
+        products_wp2_file: TextIO,
+        products_wp5_file: TextIO,
         processes_file: TextIO,
 ) -> List[str]:
     THEMES = {
@@ -244,11 +246,14 @@ def validate_csvs(
         line["Short_Name"].strip(): line
         for line in csv.DictReader(projects_file)
     }
-    PRODUCTS = {
-        line["Product"].strip(): line for line in csv.DictReader(products_file)
+    PRODUCTS_WP1 = {
+        line["Product"].strip(): line for line in csv.DictReader(products_wp1_file)
     }
-    BENCHMARKS = {
-        line["Product"].strip(): line for line in csv.DictReader(benchmarks_file)
+    PRODUCTS_WP2 = {
+        line["Product"].strip(): line for line in csv.DictReader(products_wp2_file)
+    }
+    PRODUCTS_WP5 = {
+        line["Product"].strip(): line for line in csv.DictReader(products_wp5_file)
     }
 
     issues = []
@@ -263,12 +268,14 @@ def validate_csvs(
                              columns but {len(file_column_name)} got. """
             )
 
-    _valid_length_file(products_file, "Products")
+
     _valid_length_file(projects_file, "Projects")
     _valid_length_file(variables_file, "Variables")
     _valid_length_file(missions_file, "EO Missions")
-    _valid_length_file(benchmarks_file, "Benchmarks")
     _valid_length_file(processes_file, "Processes")
+    _valid_length_file(products_wp1_file, "WP1 Products")
+    _valid_length_file(products_wp2_file, "WP2 Products")
+    _valid_length_file(products_wp5_file, "WP5 Products")
 
 
 
@@ -317,9 +324,10 @@ def validate_csvs(
                     _issues.append(
                         f"{element} '{name}' references non-existing mission '{mission}'"
                     )
-            return _issues
+        return _issues
 
-    issues = issues + _validate_products(PRODUCTS, "Product")
-    issues = issues + _validate_products(BENCHMARKS, "WP5_Tier2_Products")
+    issues = issues + _validate_products(PRODUCTS_WP1, "WP1_Tier1_Products")
+    issues = issues + _validate_products(PRODUCTS_WP2, "WP2_Tier1_Products")
+    issues = issues + _validate_products(PRODUCTS_WP5, "WP5_Tier2_Products")
 
     return issues
