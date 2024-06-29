@@ -10,9 +10,15 @@ import pystac
 import pystac.layout
 import pystac.link
 import pystac.utils
+import time
 from slugify import slugify
+from itertools import chain
 
 from .metrics import caclulate_metrics
+from .types_ import Product
+from .util import get_product_segmentation
+from .stac import apply_keywords
+
 
 from .origcsv import (
     load_orig_products,
@@ -41,22 +47,21 @@ from .stac import (
     get_eo_mission_id,
     FakeHTTPStacIO,
 )
-from .util import get_product_segmentation
-import time
 
 # to fix https://github.com/stac-utils/pystac/issues/1112
 if "related" not in pystac.link.HIERARCHICAL_LINKS:
     pystac.link.HIERARCHICAL_LINKS.append("related")
 
-from .types_ import Product
+
 
 def convert_csvs(
         variables_file: TextIO,
         themes_file: TextIO,
         eo_missions_file: TextIO,
         projects_file: TextIO,
-        products_file: TextIO,
-        benchmarks_file: TextIO,
+        wp_1_products_file: TextIO,
+        wp_2_products_file: TextIO,
+        wp_5_products_file: TextIO,
         processes_files: TextIO,
         out_dir: str,
         catalog_url: Optional[str],
@@ -65,8 +70,16 @@ def convert_csvs(
     variables = load_orig_variables(variables_file)
     themes = load_orig_themes(themes_file)
     projects = load_orig_projects(projects_file)
-    products = load_orig_products(products_file) + load_orig_benchmarks(benchmarks_file)
-    segmentation_products = get_product_segmentation(products)
+
+    products_wp1 = load_orig_products(wp_1_products_file)
+    segmentation_products_wp1 = get_product_segmentation(products_wp1)
+
+    products_wp2 = load_orig_products(wp_2_products_file)
+    segmentation_products_wp2 = get_product_segmentation(products_wp2)
+
+    products_wp5 = load_orig_benchmarks(wp_5_products_file)
+    segmentation_products_wp5 = get_product_segmentation(products_wp5)
+
     eo_missions = load_orig_eo_missions(eo_missions_file)
     processes = load_orig_processes(processes_files)
 
@@ -81,15 +94,47 @@ def convert_csvs(
           To develop tools to enhance the ability of end-users and decision-makers to extract and manipulate existing and future reanalysis and climate data sets. 
           To derive a solid scientific basis of the state-of-the-art EO retrieval systems, as well as land surface modelling capabilities that are needed to assist the EU Destination Earth initiative.
         """,
-        "4DHydro's Open Science Catalog",
+        "4dHydro's Open Science Catalog",
     )
     projects_catalog = pystac.Catalog(
         "projects", "Activities funded by ESA", "Projects"
     )
     products_catalog = pystac.Catalog(
         "products",
-        "Geoscience products representing the measured or inferred values of one or more variables over a given time range and spatial area",
+         "This catalog contains a collection of high-resolution Earth observation datasets and model outputs \n" +
+         "generated and utilized by the 4DHydro project. The datasets include soil moisture, precipitation, \n " +
+         "evapotranspiration, surface water dynamics, snow cover, dynamic water masks, irrigation mapping, groundwater \n" +
+         "storage variations, total water storage, and land surface temperature. These datasets are crucial for\n" +
+         "improving the understanding and management of the hydrological cycle, validating and enhancing land surface\n" +
+         "and hydrological models, and supporting various scientific and operational applications.",
         "Products",
+    )
+
+
+
+    products_wp1_catalog = pystac.Catalog(
+        "products-wp1",
+        "This catalog contains the Earth Observation (EO) datasets collected and consolidated under Work Package 1 (WP1) of the 4DHydro project." +
+        " WP1 is dedicated to generating a comprehensive reference EO dataset, which includes high-resolution data on key variables related to the water cycle such as soil moisture, precipitation, evapotranspiration, surface water dynamics, snow cover, lake and river water levels, groundwater storage, and irrigation areas.",
+        "WP1 Products"
+    )
+
+    products_wp2_catalog = pystac.Catalog(
+        "products-wp2",
+        "This catalog contains the reference datasets generated under Work Package 2 (WP2) of the 4DHydro project.\n"+
+        "WP2 focuses on creating a standardized, high-resolution Land Surface Models (LSM) and Hydrological Models (HM) dataset.\n"+
+        "The products include key terrestrial essential climate variables (tECVs) such as soil moisture, precipitation, evapotranspiration, and more.\n"+
+        "These datasets support the integration of Earth Observation (EO) data and LSM/HM modeling to advance the understanding of the hydrological cycle and improve water resource management.\n",
+        "WP2 Products",
+    )
+
+    products_wp5_catalog = pystac.Catalog(
+        "products-wp5",
+        "This catalog contains the datasets generated under Work Package 5 (WP5) of the 4DHydro project. \n " +
+        "WP5 focuses on benchmarking and data assimilation experiments to enhance Land Surface Models (LSM) and Hydrological Models (HM) using high-resolution Earth Observation (EO) data. \n" +
+        "The datasets include results from various calibration and data assimilation experiments aimed at improving the accuracy and scalability of hydrological models. \n " +
+        "These products are vital for achieving the project's goal of integrated EO and LSM/HM modeling to better understand and predict the hydrological cycle.",
+        "WP5 Products",
     )
 
     processes_catalog = pystac.Catalog(
@@ -156,9 +201,30 @@ def convert_csvs(
             key=lambda collection: collection.id,
         )
     )
-    products_catalog.add_children(
+
+    products_catalog.add_children([
+        products_wp1_catalog,
+        products_wp2_catalog,
+        products_wp5_catalog
+    ])
+
+    products_wp1_catalog.add_children(
         sorted(
-            (collection_from_segmentation_product(parent) for parent in segmentation_products),
+            (collection_from_segmentation_product(parent) for parent in segmentation_products_wp1),
+            key=lambda collection: collection.id,
+        )
+    )
+
+    products_wp2_catalog.add_children(
+        sorted(
+            (collection_from_segmentation_product(parent) for parent in segmentation_products_wp2),
+            key=lambda collection: collection.id,
+        )
+    )
+
+    products_wp5_catalog.add_children(
+        sorted(
+            (collection_from_segmentation_product(parent) for parent in segmentation_products_wp5),
             key=lambda collection: collection.id,
         )
     )
@@ -170,16 +236,9 @@ def convert_csvs(
         )
     )
 
-    def _link_sub_product(catalog: pystac.Catalog, products_interface: list[Product]) -> None:
-        for line_product in products_interface:
-            parent: list[pystac.Catalog] = list(
-                filter(lambda x: x.title == line_product.collection, catalog.get_children()))
-            if len(parent) != 0:
-                parent[0].add_child(collection_from_product(line_product))
-            else:
-                catalog.add_child(collection_from_product(line_product))
-
-    _link_sub_product(products_catalog, products)
+    _link_sub_product(products_wp1_catalog, products_wp1)
+    _link_sub_product(products_wp2_catalog, products_wp2)
+    _link_sub_product(products_wp5_catalog, products_wp5)
 
     # save catalog
     root.normalize_and_save(out_dir, pystac.CatalogType.SELF_CONTAINED)
@@ -197,12 +256,22 @@ def convert_csvs(
                     out_path,
                 )
 
-    print(f"--- {((time.time() - start_time)/60)} minutes ---")
+    print(f"--- {((time.time() - start_time) / 60)} minutes ---")
     print("-------------END CONVERT --------------")
 
 
+def _link_sub_product(catalog: pystac.Catalog, products_interface: list[Product]) -> None:
+    for line_product in products_interface:
+        parent: list[pystac.Catalog] = list(
+            filter(lambda x: x.title == line_product.collection, catalog.get_children()))
+        if len(parent) != 0:
+            parent[0].add_child(collection_from_product(line_product))
+        else:
+            catalog.add_child(collection_from_product(line_product))
+
+
 def validate_project(
-    collection: pystac.Collection, themes: set[str]
+        collection: pystac.Collection, themes: set[str]
 ) -> list[str]:
     errors = []
     for theme in collection.extra_fields[THEMES_PROP]:
@@ -212,10 +281,10 @@ def validate_project(
 
 
 def validate_product(
-    collection: pystac.Collection,
-    themes: set[str],
-    variables: set[str],
-    eo_missions: set[str],
+        collection: pystac.Collection,
+        themes: set[str],
+        variables: set[str],
+        eo_missions: set[str],
 ) -> list[str]:
     errors = []
     variable = collection.extra_fields[VARIABLES_PROP]
@@ -262,7 +331,7 @@ def validate_catalog(data_dir: str):
 
 
 def set_update_timestamps(
-    catalog: pystac.Catalog, stac_io: pystac.StacIO
+        catalog: pystac.Catalog, stac_io: pystac.StacIO
 ) -> Optional[datetime]:
     """Updates the `updated` field in the catalog according to the underlying
     files last modification time and its included Items and children. This also
@@ -331,12 +400,12 @@ def make_collection_assets_absolute(collection: pystac.Collection):
 
 
 def link_collections(
-    product_collections: Iterable[pystac.Collection],
-    project_collections: Iterable[pystac.Collection],
-    theme_catalogs: Iterable[pystac.Catalog],
-    variable_catalogs: Iterable[pystac.Catalog],
-    eo_mission_catalogs: Iterable[pystac.Catalog],
-    processes_collections: Iterable[pystac.Collection],
+        product_collections: Iterable[pystac.Collection],
+        project_collections: Iterable[pystac.Collection],
+        theme_catalogs: Iterable[pystac.Catalog],
+        variable_catalogs: Iterable[pystac.Catalog],
+        eo_mission_catalogs: Iterable[pystac.Catalog],
+        processes_collections: Iterable[pystac.Collection],
 ):
     themes_map: dict[str, pystac.Catalog] = {
         catalog.id: catalog for catalog in theme_catalogs
@@ -393,7 +462,7 @@ def link_collections(
             )
         )
 
-    def _links_all_products(product_interface_collections:Iterable[pystac.Collection])-> None:
+    def _links_all_products(product_interface_collections: Iterable[pystac.Collection]) -> None:
         for product_collection in product_interface_collections:
             # product -> project
             project_collection = project_map[
@@ -448,23 +517,17 @@ def link_collections(
                 )
                 eo_mission_catalog.add_child(product_collection, set_parent=True)
 
-
     # link products
     _links_all_products(product_collections)
 
 
-
-# TODO: apply keywords
-# def apply_keywords()
-
-
 def build_dist(
-    data_dir: str,
-    out_dir: str,
-    root_href: str,
-    add_iso_metadata: bool = True,
-    pretty_print: bool = True,
-    update_timestamps: bool = True,
+        data_dir: str,
+        out_dir: str,
+        root_href: str,
+        add_iso_metadata: bool = True,
+        pretty_print: bool = True,
+        update_timestamps: bool = True,
 ):
     start_time = time.time()
     shutil.copytree(
@@ -481,8 +544,10 @@ def build_dist(
     if update_timestamps:
         set_update_timestamps(root, None)
 
+    products_collection = chain(*(list(child.get_children()) for child in root.get_child("products").get_children()))
+
     link_collections(
-        root.get_child("products").get_children(),
+        products_collection,
         root.get_child("projects").get_children(),
         root.get_child("themes").get_children(),
         root.get_child("variables").get_children(),
@@ -490,17 +555,14 @@ def build_dist(
         root.get_child("processes").get_children(),
     )
 
-    # Apply keywords
-    from itertools import chain
     catalogs = chain(
-        root.get_child("products").get_children(),
+        products_collection,
         root.get_child("projects").get_children(),
         root.get_child("themes").get_children(),
         root.get_child("variables").get_children(),
         root.get_child("eo-missions").get_children(),
         root.get_child("processes").get_children(),
     )
-    from .stac import apply_keywords
     for catalog in catalogs:
         apply_keywords(catalog)
 
@@ -509,11 +571,11 @@ def build_dist(
     print("-------------END BUILD --------------")
 
 
-def build_metrics(    data_dir: str,
-    metrics_file_name: str,
-    add_to_root: bool,
-    pretty_print: bool = True,
-):
+def build_metrics(data_dir: str,
+                  metrics_file_name: str,
+                  add_to_root: bool,
+                  pretty_print: bool = True,
+                  ):
     root: pystac.Catalog = pystac.read_file(
         os.path.join(data_dir, "catalog.json")
     )

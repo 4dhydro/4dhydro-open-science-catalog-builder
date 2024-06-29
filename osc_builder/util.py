@@ -84,9 +84,9 @@ def get_product_segmentation(products=None) -> [ProductSegmentation]:
     return products_segmentation_list
 
 
-def get_model_code_ref(product) -> Union[None,str]:
+def get_model_code_ref(product) -> Union[None, str]:
     rs = list(
-        filter(lambda x:   product.id.lower().startswith(x.lower()), list(CODE_MODEL.keys())
+        filter(lambda x: product.id.lower().startswith(x.lower()), list(CODE_MODEL.keys())
                )
     )
     return CODE_MODEL.get(rs[0]) if len(rs) != 0 else None

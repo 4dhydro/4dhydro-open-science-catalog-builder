@@ -21,8 +21,9 @@ ENCODING = "UTF-8"
 @click.argument("themes_file", type=click.File("r", encoding=ENCODING))
 @click.argument("eo_missions_file", type=click.File("r", encoding=ENCODING))
 @click.argument("projects_file", type=click.File("r", encoding=ENCODING))
-@click.argument("products_file", type=click.File("r", encoding=ENCODING))
-@click.argument("benchmarks_file", type=click.File("r", encoding=ENCODING))
+@click.argument("products_wp1_file", type=click.File("r", encoding=ENCODING))
+@click.argument("products_wp2_file", type=click.File("r", encoding=ENCODING))
+@click.argument("products_wp5_file", type=click.File("r", encoding=ENCODING))
 @click.argument("processes_file", type=click.File("r", encoding=ENCODING))
 @click.option("--out-dir", "-o", default="data", type=str)
 @click.option("--catalog-url", "-c", default="", type=str)
@@ -32,8 +33,9 @@ def convert(
     themes_file: TextIO,
     eo_missions_file: TextIO,
     projects_file: TextIO,
-    products_file: TextIO,
-    benchmarks_file: TextIO,
+    products_wp1_file: TextIO,
+    products_wp2_file: TextIO,
+    products_wp5_file: TextIO,
     processes_file: TextIO,
     out_dir: str,
     catalog_url: str,
@@ -46,8 +48,9 @@ def convert(
             themes_file,
             eo_missions_file,
             projects_file,
-            products_file,
-            benchmarks_file,
+            products_wp1_file,
+            products_wp2_file,
+            products_wp5_file,
             processes_file,
         )
         if issues:
@@ -62,8 +65,9 @@ def convert(
         themes_file.seek(0)
         eo_missions_file.seek(0)
         projects_file.seek(0)
-        products_file.seek(0)
-        benchmarks_file.seek(0)
+        products_wp1_file.seek(0)
+        products_wp2_file.seek(0)
+        products_wp5_file.seek(0)
         processes_file.seek(0)
 
     convert_csvs(
@@ -71,8 +75,9 @@ def convert(
         themes_file,
         eo_missions_file,
         projects_file,
-        products_file,
-        benchmarks_file,
+        products_wp1_file,
+        products_wp2_file,
+        products_wp5_file,
         processes_file,
         out_dir,
         catalog_url,
