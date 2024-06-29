@@ -109,12 +109,3 @@ Options:
 ```bash
 $ osc build --no-add-iso -o build --pretty-print -r http://some-catalog.com ../open-science-catalog-metadata/data/
 ```
-
-###  Consolidation of a Reference LSM dataset
-
-the work package consists of a major benchmark exercise based on existing data and standard model
-evaluation procedures. The Tier 1 simulation setup will consist of varying (EO-based) forcing and reanalysis
-data sets utilizing homogenized inputs between different models where possible. All modelling groups
-are asked to provide their outputs on the World Geodetic System (WGS-84; EPSG:4326) coordinate system
-
-**Table 1: List of third-party datasets used as inputs for the LSMs/HMs in 4DHydro**
