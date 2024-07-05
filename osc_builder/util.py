@@ -54,11 +54,11 @@ def get_product_segmentation(products=None) -> [ProductSegmentation]:
         themes = []
         for product in list_related_product:
             if len(product.variables) != 0:
-                variables.append(*product.variables)
+                variables.extend(product.variables)
             if len(product.eo_missions) != 0:
-                eo_missions.append(*product.eo_missions)
+                eo_missions.extend(product.eo_missions)
             if len(product.themes) != 0:
-                themes.append(*product.themes)
+                themes.extend(product.themes)
 
         variables = list(dict.fromkeys(variables))
         eo_missions = list(dict.fromkeys(eo_missions))
